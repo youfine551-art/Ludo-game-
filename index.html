@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Ludo Kingdom - Multiplayer Board Game</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', 'Poppins', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .game-wrapper {
+            background: white;
+            border-radius: 40px;
+            padding: 20px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 30px;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            cursor: pointer;
+            background: #faf8f0;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+            padding: 0 10px;
+        }
+
+        .level-section {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .level-badge {
+            font-size: 24px;
+            font-weight: bold;
+            background: white;
+            color: #667eea;
+            padding: 5px 15px;
+            border-radius: 30px;
+            margin-left: 10px;
+        }
+
+        .players-select {
+            display: flex;
+            gap: 10px;
+            background: #f0f0f0;
+            padding: 5px;
+            border-radius: 50px;
+        }
+
+        .player-option {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 40px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            background: transparent;
+            font-family: inherit;
+        }
+
+        .player-option.active {
+            background: #667eea;
+            color: white;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.4);
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            font-family: inherit;
+            color: white;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .dice-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .dice {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 55px;
+            font-weight: bold;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+            border: 3px solid #667eea;
+        }
+
+        .dice.rolling {
+            animation: rollDice 0.3s ease-in-out;
+        }
+
+        @keyframes rollDice {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.1); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        .turn-indicator {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 22px;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 50px;
+            background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+        }
+
+        .message {
+            text-align: center;
+            margin-top: 10px;
+            color: #667eea;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .sound-toggle {
+            background: #f0f0f0;
+            border-radius: 30px;
+            padding: 8px 15px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+
+        .sound-toggle:hover {
+            background: #e0e0e0;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 700px) {
+            canvas {
+                width: 100%;
+                height: auto;
+            }
+            button {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+            .dice {
+                width: 60px;
+                height: 60px;
+                font-size: 40px;
+            }
+            .turn-indicator {
+                font-size: 16px;
+            }
+            .game-header {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="game-wrapper">
+        <div class="game-header">
+            <div class="level-section">
+                🌟 LEVEL <span class="level-badge" id="levelDisplay">1</span>
+            </div>
+            <div class="players-select">
+                <button class="player-option active" data-players="2">👥 2 Players</button>
+                <button class="player-option" data-players="4">👥 4 Players</button>
+            </div>
+            <div class="sound-toggle" id="soundToggle">
+                🔈 Sound ON
+            </div>
+        </div>
+        
+        <div class="game-container">
+            <canvas id="ludoCanvas" width="650" height="650"></canvas>
+        </div>
+        
+        <div class="controls">
+            <div class="dice-area">
+                <div class="dice" id="diceValue">🎲</div>
+                <button id="rollBtn">🎲 Roll Dice</button>
+            </div>
+            <button id="resetBtn">🔄 New Game</button>
+        </div>
+        <div class="turn-indicator" id="turnIndicator"></div>
+        <div class="message" id="message"></div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('ludoCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Audio context for sounds
+    let audioEnabled = true;
+    
+    // Game state
+    let currentPlayer = 0;
+    let diceValue = 1;
+    let gameActive = true;
+    let rolling = false;
+    let currentLevel = 1;
+    let playerCount = 2; // 2 or 4 players
+    let waitingForAI = false;
+    
+    // Player colors
+    const colors = ['#e74c3c', '#2ecc71', '#f39c12', '#3498db'];
+    const playerNames = ['🔴 RED', '🟢 GREEN', '🟡 YELLOW', '🔵 BLUE'];
+    
+    // Token positions (4 tokens per player)
+    let tokens = [
+        [-1, -1, -1, -1],
+        [-1, -1, -1, -1],
+        [-1, -1, -1, -1],
+        [-1, -1, -1, -1]
+    ];
+    
+    // Track which players are active (for 2-player mode, only 0 and 1)
+    let activePlayers = [true, true, false, false];
+    
+    // Path starting positions
+    const startPositions = [0, 13, 26, 39];
+    
+    // Home positions
+    const homePositions = {
+        0: [{x: 20, y: 20}, {x: 85, y: 20}, {x: 20, y: 85}, {x: 85, y: 85}],
+        1: [{x: 545, y: 20}, {x: 610, y: 20}, {x: 545, y: 85}, {x: 610, y: 85}],
+        2: [{x: 545, y: 545}, {x: 610, y: 545}, {x: 545, y: 610}, {x: 610, y: 610}],
+        3: [{x: 20, y: 545}, {x: 85, y: 545}, {x: 20, y: 610}, {x: 85, y: 610}]
+    };
+    
+    // Path coordinates
+    let pathCoordinates = [];
+    
+    // Generate beautiful path coordinates
+    function generatePath() {
+        const coords = [];
+        const step = 55;
+        
+        // Outer track
+        for(let i = 0; i < 6; i++) coords.push({x: 75 + i*step, y: 75});
+        for(let i = 1; i < 6; i++) coords.push({x: 350, y: 75 + i*step});
+        for(let i = 1; i < 6; i++) coords.push({x: 350 - i*step, y: 350});
+        for(let i = 1; i < 6; i++) coords.push({x: 75, y: 350 - i*step});
+        // Inner track
+        for(let i = 1; i < 4; i++) coords.push({x: 130 + i*step, y: 130});
+        for(let i = 1; i < 4; i++) coords.push({x: 300, y: 130 + i*step});
+        for(let i = 1; i < 4; i++) coords.push({x: 300 - i*step, y: 300});
+        for(let i = 1; i < 4; i++) coords.push({x: 130, y: 300 - i*step});
+        
+        while(coords.length < 52) coords.push({x: 150, y: 150});
+        while(coords.length > 52) coords.pop();
+        
+        return coords;
+    }
+    
+    pathCoordinates = generatePath();
+    
+    // Play sound effect
+    function playSound(type) {
+        if(!audioEnabled) return;
+        
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioCtx = new AudioContext();
+        
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        let frequency = 440;
+        let duration = 0.2;
+        
+        switch(type) {
+            case 'roll':
+                frequency = 523.25;
+                duration = 0.15;
+                break;
+            case 'move':
+                frequency = 659.25;
+                duration = 0.1;
+                break;
+            case 'win':
+                frequency = 880;
+                duration = 0.5;
+                break;
+            case 'error':
+                frequency = 220;
+                duration = 0.2;
+                break;
+        }
+        
+        oscillator.frequency.value = frequency;
+        gainNode.gain.value = 0.3;
+        oscillator.start();
+        gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+        oscillator.stop(audioCtx.currentTime + duration);
+    }
+    
+    // Draw beautiful Ludo board
+    function drawBoard() {
+        // White theme background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 650, 650);
+        
+        // Beautiful grid with pastel colors
+        for(let i = 0; i <= 4; i++) {
+            ctx.beginPath();
+            ctx.moveTo(130 + i*130, 0);
+            ctx.lineTo(130 + i*130, 650);
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(0, 130 + i*130);
+            ctx.lineTo(650, 130 + i*130);
+            ctx.stroke();
+        }
+        
+        // Colored corners with gradient
+        const corners = [
+            {x: 0, y: 0, color: '#ffebee'},      // Light red
+            {x: 520, y: 0, color: '#e8f5e9'},    // Light green
+            {x: 0, y: 520, color: '#fff9c4'},    // Light yellow
+            {x: 520, y: 520, color: '#e3f2fd'}   // Light blue
+        ];
+        
+        corners.forEach(corner => {
+            ctx.fillStyle = corner.color;
+            ctx.fillRect(corner.x, corner.y, 130, 130);
+            
+            // Add subtle pattern
+            ctx.fillStyle = 'rgba(0,0,0,0.05)';
+            for(let i = 0; i < 4; i++) {
+                ctx.fillRect(corner.x + 20 + i*30, corner.y + 20, 10, 90);
+                ctx.fillRect(corner.x + 20, corner.y + 20 + i*30, 90, 10);
+            }
+        });
+        
+        // Center decoration
+        ctx.fillStyle = '#faf8f0';
+        ctx.fillRect(130, 130, 390, 390);
+        
+        // Draw path with gradient
+        for(let i = 0; i < pathCoordinates.length; i++) {
+            const coord = pathCoordinates[i];
+            const gradient = ctx.createRadialGradient(coord.x, coord.y, 5, coord.x, coord.y, 15);
+            gradient.addColorStop(0, '#ffd89b');
+            gradient.addColorStop(1, '#c7e9fb');
+            ctx.beginPath();
+            ctx.arc(coord.x, coord.y, 13, 0, Math.PI * 2);
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Add number for some positions
+            if(i % 13 === 0 && i < 52) {
+                ctx.fillStyle = '#999';
+                ctx.font = '10px Arial';
+                ctx.fillText(i+1, coord.x-4, coord.y-8);
+            }
+        }
+        
+        // Star decorations in center
+        ctx.fillStyle = '#ffd700';
+        for(let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(325, 325, 20 + i*10, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 215, 0, ${0.1 - i*0.03})`;
+            ctx.fill();
+        }
+    }
+    
+    // Draw tokens
+    function drawTokens() {
+        for(let p = 0; p < 4; p++) {
+            if(!activePlayers[p]) continue;
+            
+            for(let t = 0; t < 4; t++) {
+                let pos = tokens[p][t];
+                let x, y;
+                
+                if(pos === -1) {
+                    x = homePositions[p][t].x;
+                    y = homePositions[p][t].y;
+                } else if(pos >= 0 && pos < pathCoordinates.length) {
+                    x = pathCoordinates[pos].x;
+                    y = pathCoordinates[pos].y;
+                } else {
+                    continue;
+                }
+                
+                // Draw token with shadow
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.arc(x, y, 14, 0, Math.PI * 2);
+                ctx.fillStyle = colors[p];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Token number
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText((t+1).toString(), x, y);
+                ctx.shadowBlur = 0;
+                
+                // Highlight if current player's token
+                if(p === currentPlayer && gameActive) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 18, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#ffd700';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+    
+    // Get AI decision based on level
+    function getAIDecision() {
+        // Higher levels make smarter decisions
+        const smartness = currentLevel / 10;
+        
+        // Find best token to move
+        for(let i = 0; i < 4; i++) {
+            if(tokens[currentPlayer][i] === -1 && diceValue === 6) {
+                if(Math.random() < smartness + 0.3) return i;
+            }
+            if(tokens[currentPlayer][i] >= 0 && tokens[currentPlayer][i] + diceValue < pathCoordinates.length) {
+                // Higher level AI prefers moving tokens that are closer to finishing
+                const progress = tokens[currentPlayer][i] / 52;
+                if(Math.random() < smartness + progress) return i;
+            }
+        }
+        return -1;
+    }
+    
+    // Move token
+    function moveToken(tokenIndex) {
+        let moved = false;
+        
+        if(tokens[currentPlayer][tokenIndex] === -1 && diceValue === 6) {
+            tokens[currentPlayer][tokenIndex] = startPositions[currentPlayer];
+            moved = true;
+            playSound('move');
+        } else if(tokens[currentPlayer][tokenIndex] >= 0 && 
+                  tokens[currentPlayer][tokenIndex] + diceValue < pathCoordinates.length) {
+            tokens[currentPlayer][tokenIndex] += diceValue;
+            moved = true;
+            playSound('move');
+            
+            // Check win condition
+            if(tokens[currentPlayer][tokenIndex] === pathCoordinates.length - 1) {
+                let allFinished = true;
+                for(let i = 0; i < 4; i++) {
+                    if(tokens[currentPlayer][i] !== pathCoordinates.length - 1) {
+                        allFinished = false;
+                        break;
+                    }
+                }
+                if(allFinished) {
+                    playSound('win');
+                    gameActive = false;
+                    document.getElementById('message').innerHTML = `🎉 ${playerNames[currentPlayer]} WINS! 🎉<br>Level ${currentLevel} Complete!`;
+                    if(currentLevel < 10) {
+                        setTimeout(() => {
+                            currentLevel++;
+                            document.getElementById('levelDisplay').textContent = currentLevel;
+                            resetGame();
+                            document.getElementById('message').innerHTML = `✨ Advanced to Level ${currentLevel}! ✨`;
+                        }, 3000);
+                    } else {
+                        document.getElementById('message').innerHTML = '🏆 CHAMPION! You completed all 10 levels! 🏆';
+                    }
+                    return true;
+                }
+            }
+        }
+        
+        if(moved) {
+            drawBoard();
+            drawTokens();
+            
+            if(diceValue !== 6) {
+                nextPlayer();
+            } else {
+                document.getElementById('message').textContent = '🎲 Extra turn! Roll again! 🎲';
+                updateTurnDisplay();
+            }
+            return true;
+        }
+        return false;
+    }
+    
+    // Roll dice
+    function rollDice() {
+        if(rolling || !gameActive) return;
+        
+        // Check if it's AI turn
+        if(currentPlayer !== 0 && activePlayers[currentPlayer]) {
+            if(waitingForAI) return;
+            waitingForAI = true;
+            setTimeout(() => {
+                doAIRoll();
+            }, 800);
+            return;
+        }
+        
+        rolling = true;
+        const diceEl = document.getElementById('diceValue');
+        let rolls = 0;
+        
+        const rollInterval = setInterval(() => {
+            const randomValue = Math.floor(Math.random() * 6) + 1;
+            const diceSymbols = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+            diceEl.textContent = diceSymbols[randomValue - 1];
+            diceValue = randomValue;
+            rolls++;
+            
+            if(rolls >= 10) {
+                clearInterval(rollInterval);
+                diceEl.classList.remove('rolling');
+                rolling = false;
+                playSound('roll');
+                processTurn();
+            }
+        }, 50);
+        
+        diceEl.classList.add('rolling');
+    }
+    
+    // Process turn after roll
+    function processTurn() {
+        let hasValidMove = false;
+        
+        for(let i = 0; i < 4; i++) {
+            if(tokens[currentPlayer][i] === -1 && diceValue === 6) {
+                hasValidMove = true;
+                break;
+            }
+            if(tokens[currentPlayer][i] >= 0 && tokens[currentPlayer][i] + diceValue < pathCoordinates.length) {
+                hasValidMove = true;
+                break;
+            }
+        }
+        
+        if(!hasValidMove && diceValue !== 6) {
+            document.getElementById('message').textContent = '❌ No valid moves! Turn passed.';
+            playSound('error');
+            setTimeout(() => nextPlayer(), 1000);
+        } else {
+       
